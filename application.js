@@ -33,6 +33,7 @@ var updateMyIP = function(callback) {
     if (callback) callback();
 }
 
+
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
@@ -52,7 +53,7 @@ var createMessage = function(content, destination, ttl, callback) {
             message[id].ttl = ttl;
         }
 
-        messageBuffer[id] = message[id];
+//        messageBuffer[id] = message[id];
 
         // Callback with Buffer
         callback(new Buffer(JSON.stringify(message)));
@@ -121,23 +122,24 @@ socket.on('message', function(message, remote) {
                     messageBuffer[msgId] = newMessage[msgId];
 
                     // Is this message intended for us?
-                    console.log(newMessage);
-                    if(newMessage[msgId].destination in myIP) {
-                        console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
-                        if(ioSockGlobal) {
-                            ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content});
-                        }
-                    } else {
-                        // Send and forward with decremented TTL
-                        if(newMessage[msgId].ttl != 0) {
-                           var forwardMessage = {};
-                           forwardMessage[msgId] = newMessage[msgId];
-                           convertMessageToBuffer(forwardMessage, function(bufferedMessage) {
-                                socket.setBroadcast(true);
-                                socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
-                                   console.log("Got new message with id " + msgId + ", forwarding it.")
-                                });
-                           });
+                    for(ip in myIP) {
+                        if(newMessage[msgId].destination == myIP[ip]) {
+                            console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
+                            if(ioSockGlobal) {
+                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content});
+                            }
+                        } else {
+                            // Send and forward with decremented TTL
+                            if(newMessage[msgId].ttl != 0) {
+                               var forwardMessage = {};
+                               forwardMessage[msgId] = newMessage[msgId];
+                               convertMessageToBuffer(forwardMessage, function(bufferedMessage) {
+                                    socket.setBroadcast(true);
+                                    socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
+                                       console.log("Got new message with id " + msgId + ", forwarding it.")
+                                    });
+                               });
+                            }
                         }
                     }
                 } else {

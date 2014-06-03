@@ -1,10 +1,8 @@
-<html ng-app="broadcastService">
+<html>
 <head>
 <title>Broadcast Service</title>
 <meta name="viewport" content="width=device-width">
 <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js" type="text/javascript"></script>
-<script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js" type="text/javascript"></script>
 <style type="text/css">
   /* Space out content a bit */
   body {
@@ -15,10 +13,39 @@
 <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
 <script>
-
-var socket = io.connect('http://localhost:3000');
 var app = angular.module('broadcastService', []);
-app.controller('broadcastServiceController', function($scope) {
+app.factory('socket', ['$rootScope', function ($rootScope) {
+  var socket = io.connect();
+
+  return {
+    on: function (eventName, callback) {
+      function wrapper() {
+        var args = arguments;
+        $rootScope.$apply(function () {
+          callback.apply(socket, args);
+        });
+      }
+
+      socket.on(eventName, wrapper);
+
+      return function () {
+        socket.removeListener(eventName, wrapper);
+      };
+    },
+
+    emit: function (eventName, data, callback) {
+      socket.emit(eventName, data, function () {
+        var args = arguments;
+        $rootScope.$apply(function () {
+          if(callback) {
+            callback.apply(socket, args);
+          }
+        });
+      });
+    }
+  };
+}]);
+app.controller('broadcastServiceController', ['$scope', 'socket', function($scope, socket) {
     $scope.pesanDiterima = []
     $scope.content = "";
     $scope.destination = "";
@@ -34,13 +61,15 @@ app.controller('broadcastServiceController', function($scope) {
         });
 
     }
-    socket.on('retrieveNewMessage', function(data) {
+
+    socket.on('retrieveMessage', function(data) {
         $scope.pesanDiterima.push(data);
     });
-})
+}])
 </script>
 </head>
-<body ng-controller="broadcastServiceController">
+<body ng-app="broadcastService">
+<div ng-controller="broadcastServiceController">
 <div class="container">
   <div class="header">
     <h3 class="text-muted">Broadcast Service</h3>
@@ -58,8 +87,8 @@ app.controller('broadcastServiceController', function($scope) {
         </div>
         <button ng-click="sendMessage()" class="btn">Send</button>
         <h3>Pesan diterima</h3>
-        <ul ng-repeat="item in pesanDiterima">
-            <li>{{item.content}}</li>
+        <ul>
+            <li ng-repeat="item in pesanDiterima">{{item.content}}</li>
         </ul>
     </div>
   </div>
@@ -69,5 +98,6 @@ app.controller('broadcastServiceController', function($scope) {
   </div>
 
 </div> <!-- /container -->
+</div>
 </body>
 </html>
