@@ -121,6 +121,7 @@ socket.on('message', function(message, remote) {
                     messageBuffer[msgId] = newMessage[msgId];
 
                     // Is this message intended for us?
+                    console.log(newMessage[msgId]);
                     if(newMessage[msgId].destination in myIP) {
                         console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
                         if(ioSockGlobal) {
