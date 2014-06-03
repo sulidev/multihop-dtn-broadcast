@@ -1,0 +1,15 @@
+{
+  "name": "multihop-dtn-broadcast",
+  "description": "UDP based Multihop, Delay-Tollerant Ping Server",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "3.x",
+    "ejs": "~0.7.1",
+    "socket.io": "0.9.16"
+  },
+  "scripts": {
+    "start": "node application.js"
+  },
+  "main": "application.js"
+}
