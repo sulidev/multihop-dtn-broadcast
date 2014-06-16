@@ -37,14 +37,15 @@ var updateMyIP = function(callback) {
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
-var createMessage = function(content, destination, ttl, callback) {
+var retrievedMessage = [{source: "Robot", content: "Halo :)"}];
+var createMessage = function(source, content, destination, ttl, callback) {
     var message = {};
 
     // Generate random hash ID
     crypto.randomBytes(48, function(ex, buf) {
         var id = buf.toString('hex');
         message[id] = {};
-
+        message[id].source = source;
         message[id].content = content;
         message[id].destination = destination;
         if(!ttl) {
@@ -101,13 +102,17 @@ io.sockets.on('connection', function(iosock) {
 
     iosock.on('sendMessage', function(data, callback) {
         // Kirim pesan
-        createMessage(data.content, data.destination, 5, function(bufferedMessage) {
+        createMessage(data.source, data.content, data.destination, 5, function(bufferedMessage) {
             socket.setBroadcast(true);
             socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
                 callback(err);
             });
-        })
+        });
     });
+
+    iosock.on('getAllMessage', function(data, callback) {
+        callback(retrievedMessage);
+    })
 });
 
 socket.on('message', function(message, remote) {
@@ -125,8 +130,9 @@ socket.on('message', function(message, remote) {
                     for(ip in myIP) {
                         if(newMessage[msgId].destination == myIP[ip]) {
                             console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
+                            retrievedMessage.push(newMessage[msgId]);
                             if(ioSockGlobal) {
-                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content});
+                                ioSockGlobal.emit('retrieveMessage', {source: newMessage[msgId].source, content: newMessage[msgId].content});
                             }
                         } else {
                             // Send and forward with decremented TTL
