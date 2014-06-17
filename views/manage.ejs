@@ -10,7 +10,7 @@
     padding-top: 20px;
     padding-bottom: 20px;
   }
-  #my-maps {
+  #myMaps {
         height: 40%;
         width: 50%;
         margin: 0px 0px auto 20px;
@@ -54,17 +54,29 @@ app.factory('socket', ['$rootScope', function ($rootScope) {
   };
 }]);
 app.controller('broadcastServiceController', ['$scope', 'socket', function($scope, socket) {
+	var map;
+	google.maps.event.addDomListener(window, 'load', function() {
+		var mapOptions = {
+			zoom: 17,
+			center: new google.maps.LatLng(-7.276513,112.791692)
+		};
+		map = new google.maps.Map(document.getElementById('myMaps'),mapOptions);
+	});
+
     $scope.pesanDiterima = []
     $scope.content = "";
     $scope.destination = "";
     $scope.location = "";
+    $scope.mapClick = function() {
+    	$scope.location = map.getCenter().toString();
+    }
     $scope.sendMessage = function() {
         socket.emit('sendMessage', {content: $scope.content, destination: $scope.destination, location: $scope.location}, function(err) {
             if(err) {
                 alert('Some error may happened. Try again.')
             } else {
                 alert('Your message was processed');
-                $scope.location = "":
+                $scope.location = "";
                 $scope.content = "";
                 $scope.destination = "";
             }
@@ -77,21 +89,13 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
     });
 }]);
 
-var map;
-function mapInit(){
-	var mapOptions = {
-		zoom: 17,
-		center: new google.maps.LatLng(-7.276513,112.791692)
-	};
-	map = new google.maps.Map(document.getElementById('my-maps'),mapOptions);
-}
-google.maps.event.addDomListener(window, 'load', mapInit);
+
 </script>
 </head>
 <body ng-app="broadcastService">
 <h3>Choose your location</h3>
-<div id="my-maps"></div>
 <div ng-controller="broadcastServiceController">
+<div id="myMaps" ng-click="mapClick()"></div>
 <div class="container">
   <section class="module">
     <header class="top-bar">
@@ -123,6 +127,7 @@ google.maps.event.addDomListener(window, 'load', mapInit);
         <div class="messages">
           <p>{{item.content}}</p>
           <time>{{item.source}} • {{item.timestamp}}</time>
+          <time>{{item.location}}</time>
         </div>
       </li>
     </ol>

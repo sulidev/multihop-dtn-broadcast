@@ -36,7 +36,7 @@ var updateMyIP = function(callback) {
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
-var createMessage = function(content, source, destination, location, ttl, timeout, callback) {
+var createMessage = function(content, source, destination, location, ttl, callback) {
     var message = {};
 
     // Generate random hash ID
@@ -48,7 +48,9 @@ var createMessage = function(content, source, destination, location, ttl, timeou
         message[id].location = location;
         message[id].source = source;
         message[id].destination = destination;
-        message[id].timeout = timeout;
+        var timeout = new Date();
+        timeout.setHours(timeout.getHours() + 1);
+        message[id].timeout = timeout.getTime();
         message[id].timestamp = new Date().getTime();
         if(!ttl) {
             message[id].ttl = 5;
@@ -56,7 +58,7 @@ var createMessage = function(content, source, destination, location, ttl, timeou
             message[id].ttl = ttl;
         }
 
-//        messageBuffer[id] = message[id];
+        //messageBuffer[id] = message[id];
 
         // Callback with Buffer
         callback(new Buffer(JSON.stringify(message)));
@@ -83,17 +85,6 @@ var broadcastStorm = function(message, msgId, callback){
             console.log("Auto broadcast message with id " + msgId);
             callback();
         });
-    });
-}
-
-var rebroadcaster = function(message, msgId){
-    broadcastStorm(message, msgId, function(){
-        var target = message[msgId].timestamp+message[msgId].timeout;
-        var now = new Date().getTime();
-        console.log("Target:"+ target + ", Now:" + now);
-        if(target>now){
-            rebroadcaster(message, msgId);
-        }
     });
 }
 
@@ -129,7 +120,7 @@ io.sockets.on('connection', function(iosock) {
     iosock.on('sendMessage', function(data, callback) {
         // Kirim pesan
         updateMyIP(function(){
-            createMessage(data.content, myIP[1], data.destination, data.location, 5, 50, function(bufferedMessage) {
+            createMessage(data.content, myIP[1], data.destination, data.location, 5, function(bufferedMessage) {
                 socket.setBroadcast(true);
                 socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
                     callback(err);
@@ -155,7 +146,7 @@ socket.on('message', function(message, remote) {
                         if(newMessage[msgId].destination == myIP[ip]) {
                             console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
                             if(ioSockGlobal) {
-                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content, timestamp: new Date(newMessage[msgId].timestamp).toLocaleTimeString(), source: newMessage[msgId].source});
+                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content, timestamp: new Date(newMessage[msgId].timestamp).toLocaleTimeString(), source: newMessage[msgId].source, location: newMessage[msgId].location});
                             }
                         } else {
                             // Send and forward with decremented TTL
@@ -171,7 +162,6 @@ socket.on('message', function(message, remote) {
                             }
                         }
                     }
-                    rebroadcaster(newMessage, msgId);
                 } else {
                    console.log("We have the same message with id " + msgId + ", just droping it");
                 }
@@ -181,3 +171,14 @@ socket.on('message', function(message, remote) {
 });
 
 socket.bind(port, host);
+
+setInterval(function() {
+    for (idx in messageBuffer) {
+        var target = messageBuffer[idx].timestamp+messageBuffer[idx].timeout;
+        var now = new Date().getTime();
+        console.log("Target:"+ target + ", Now:" + now);
+        if(target>now){
+            broadcastStorm(messageBuffer, idx, function(){});
+        }
+    }
+}, 5000)
