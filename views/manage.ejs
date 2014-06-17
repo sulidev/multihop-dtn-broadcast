@@ -19,7 +19,7 @@
 </style>
 <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4h2Q11CttvQWedEbH8sGyy_8SHxKnpb4"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4h2Q11CttvQWedEbH8sGyy_8SHxKnpb4&libraries=geometry"></script>
 <script>
 var app = angular.module('broadcastService', []);
 app.factory('socket', ['$rootScope', function ($rootScope) {
@@ -66,12 +66,22 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
     $scope.pesanDiterima = []
     socket.emit('retrieveAllMessage', {}, function(data) {
     	$scope.pesanDiterima = data;
+        for(idx in $scope.pesanDiterima) {
+            var latSaya = $scope.location.split(",")[0];
+            var longSaya = $scope.location.split(",")[1];
+            var latDia = $scope.pesanDiterima[idx].location.split(",")[0]
+            var longDia = $scope.pesanDiterima[idx].location.split(",")[1]
+
+            var p1 = new google.maps.LatLng(latSaya, longSaya);
+            var p2 = new google.maps.LatLng(latDia, longDia);
+            $scope.pesanDiterima[idx].jarak = (google.maps.geometry.spherical.computeDistanceBetween(p1, p2) / 1000).toFixed(2);
+        }
     })
     $scope.content = "";
     $scope.destination = "";
-    $scope.location = "";
+    $scope.location = "-7.276513,112.791692";
     $scope.mapClick = function() {
-    	$scope.location = map.getCenter().toString();
+    	$scope.location = map.getCenter().toString().replace("(", "").replace(")", "");
     }
     $scope.sendMessage = function() {
         socket.emit('sendMessage', {content: $scope.content, destination: $scope.destination, location: $scope.location}, function(err) {
@@ -127,8 +137,8 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
         </div>
         <div class="messages">
           <p>{{item.content}}</p>
-          <time>{{item.source}} • {{item.timestamp}}</time>
-          <time>{{item.location}}</time>
+          <time>{{item.source}}</time>
+          <time>Jarak {{item.jarak}} km</time>
         </div>
       </li>
     </ol>

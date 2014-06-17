@@ -133,6 +133,7 @@ io.sockets.on('connection', function(iosock) {
     iosock.on('retrieveAllMessage', function(data, callback) {
         callback(retrievedMessage);
     })
+
 });
 
 socket.on('message', function(message, remote) {
@@ -159,6 +160,7 @@ socket.on('message', function(message, remote) {
                             if(newMessage[msgId].ttl != 0) {
                                var forwardMessage = {};
                                forwardMessage[msgId] = newMessage[msgId];
+                               forwardMessage[msgId].ttl = forwardMessage[msgId].ttl - 1;
                                convertMessageToBuffer(forwardMessage, function(bufferedMessage) {
                                     socket.setBroadcast(true);
                                     socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
