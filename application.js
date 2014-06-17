@@ -36,7 +36,7 @@ var updateMyIP = function(callback) {
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
-var createMessage = function(content, source, destination, ttl, timeout, callback) {
+var createMessage = function(content, source, destination, location, ttl, timeout, callback) {
     var message = {};
 
     // Generate random hash ID
@@ -45,6 +45,7 @@ var createMessage = function(content, source, destination, ttl, timeout, callbac
         message[id] = {};
 
         message[id].content = content;
+        message[id].location = location;
         message[id].source = source;
         message[id].destination = destination;
         message[id].timeout = timeout;
@@ -128,7 +129,7 @@ io.sockets.on('connection', function(iosock) {
     iosock.on('sendMessage', function(data, callback) {
         // Kirim pesan
         updateMyIP(function(){
-            createMessage(data.content, myIP[1], data.destination, 5, 50, function(bufferedMessage) {
+            createMessage(data.content, myIP[1], data.destination, data.location, 5, 50, function(bufferedMessage) {
                 socket.setBroadcast(true);
                 socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
                     callback(err);
