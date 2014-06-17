@@ -182,7 +182,7 @@ socket.bind(port, host);
 
 setInterval(function() {
     for (idx in messageBuffer) {
-        var target = messageBuffer[idx].timestamp+messageBuffer[idx].timeout;
+        var target = messageBuffer[idx].timeout;
         var now = new Date().getTime();
         console.log("Target:"+ target + ", Now:" + now);
         if(target>now){
