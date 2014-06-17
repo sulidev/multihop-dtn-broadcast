@@ -17,7 +17,6 @@ var port = 25000;
 var host = "255.255.255.255";    // Receive and send from/to everything
 
 
-
 // IP INFORMATION
 var myIP = []
 var networkInterfaces = os.networkInterfaces();
@@ -37,17 +36,19 @@ var updateMyIP = function(callback) {
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
-var retrievedMessage = [{source: "Robot", content: "Halo :)"}];
-var createMessage = function(source, content, destination, ttl, callback) {
+var createMessage = function(content, source, destination, ttl, timeout, callback) {
     var message = {};
 
     // Generate random hash ID
     crypto.randomBytes(48, function(ex, buf) {
         var id = buf.toString('hex');
         message[id] = {};
-        message[id].source = source;
+
         message[id].content = content;
+        message[id].source = source;
         message[id].destination = destination;
+        message[id].timeout = timeout;
+        message[id].timestamp = new Date().getTime();
         if(!ttl) {
             message[id].ttl = 5;
         } else {
@@ -72,6 +73,29 @@ var readMessage = function(bufferMessage, callback) {
     callback(JSON.parse(serializedMessage));
 }
 
+var broadcastStorm = function(message, msgId, callback){
+    var forwardMessage = {};
+    forwardMessage[msgId] = message[msgId];
+    convertMessageToBuffer(forwardMessage, function(bufferedMessage) {
+        socket.setBroadcast(true);
+        socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
+            console.log("Auto broadcast message with id " + msgId);
+            callback();
+        });
+    });
+}
+
+var rebroadcaster = function(message, msgId){
+    broadcastStorm(message, msgId, function(){
+        var target = message[msgId].timestamp+message[msgId].timeout;
+        var now = new Date().getTime();
+        console.log("Target:"+ target + ", Now:" + now);
+        if(target>now){
+            rebroadcaster(message, msgId);
+        }
+    });
+}
+
 // SOCKET EVENT
 var socket = dgram.createSocket('udp4');
 var address = null;
@@ -85,6 +109,7 @@ socket.on('listening', function() {
 var app = express();
 app.configure(function() {
     app.use(express.static(__dirname));
+    //app.use(express.static(__dirname + '/public'));
     app.set('view engine', 'ejs');
 });
 
@@ -102,17 +127,15 @@ io.sockets.on('connection', function(iosock) {
 
     iosock.on('sendMessage', function(data, callback) {
         // Kirim pesan
-        createMessage(data.source, data.content, data.destination, 5, function(bufferedMessage) {
-            socket.setBroadcast(true);
-            socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
-                callback(err);
+        updateMyIP(function(){
+            createMessage(data.content, myIP[1], data.destination, 5, 50, function(bufferedMessage) {
+                socket.setBroadcast(true);
+                socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
+                    callback(err);
+                });
             });
         });
     });
-
-    iosock.on('getAllMessage', function(data, callback) {
-        callback(retrievedMessage);
-    })
 });
 
 socket.on('message', function(message, remote) {
@@ -130,9 +153,8 @@ socket.on('message', function(message, remote) {
                     for(ip in myIP) {
                         if(newMessage[msgId].destination == myIP[ip]) {
                             console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
-                            retrievedMessage.push(newMessage[msgId]);
                             if(ioSockGlobal) {
-                                ioSockGlobal.emit('retrieveMessage', {source: newMessage[msgId].source, content: newMessage[msgId].content});
+                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content, timestamp: new Date(newMessage[msgId].timestamp).toLocaleTimeString(), source: newMessage[msgId].source});
                             }
                         } else {
                             // Send and forward with decremented TTL
@@ -142,12 +164,13 @@ socket.on('message', function(message, remote) {
                                convertMessageToBuffer(forwardMessage, function(bufferedMessage) {
                                     socket.setBroadcast(true);
                                     socket.send(bufferedMessage, 0, bufferedMessage.length, port, host, function(err, bytes) {
-                                       console.log("Got new message with id " + msgId + ", forwarding it.")
+                                        console.log("Got new message with id " + msgId + ", forwarding it.");
                                     });
-                               });
+                                });
                             }
                         }
                     }
+                    rebroadcaster(newMessage, msgId);
                 } else {
                    console.log("We have the same message with id " + msgId + ", just droping it");
                 }

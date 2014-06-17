@@ -2,7 +2,8 @@
 <head>
 <title>Broadcast Service</title>
 <meta name="viewport" content="width=device-width">
-<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"/>
+<!--link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"/-->
+<link type="text/css" rel="stylesheet" href="/public/chat.css"/>
 <style type="text/css">
   /* Space out content a bit */
   body {
@@ -46,12 +47,11 @@ app.factory('socket', ['$rootScope', function ($rootScope) {
   };
 }]);
 app.controller('broadcastServiceController', ['$scope', 'socket', function($scope, socket) {
-    $scope.pesanDiterima = [];
+    $scope.pesanDiterima = []
     $scope.content = "";
-    $scope.source = "";
     $scope.destination = "";
     $scope.sendMessage = function() {
-        socket.emit('sendMessage', {source: $scope.source, content: $scope.content, destination: $scope.destination}, function(err) {
+        socket.emit('sendMessage', {content: $scope.content, destination: $scope.destination}, function(err) {
             if(err) {
                 alert('Some error may happened. Try again.')
             } else {
@@ -61,50 +61,62 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
             }
         });
 
-    }
+    };
 
     socket.on('retrieveMessage', function(data) {
         $scope.pesanDiterima.push(data);
     });
-    socket.emit('getAllMessage', {}, function(data) {
-        $scope.pesanDiterima = data;
-    });
-}])
+}]);
 </script>
 </head>
 <body ng-app="broadcastService">
 <div ng-controller="broadcastServiceController">
 <div class="container">
-  <div class="header">
-    <h3 class="text-muted">Broadcast Service</h3>
-  </div>
+  <section class="module">
+    <header class="top-bar">
+      <div class="left">
+        <span class="icon typicons-message"></span>
+        <h1>Broadcast Service</h1>
+      </div>
+      
+      <div class="right">
+        <span class="icon typicons-minus"></span>
+        <span class="icon typicons-times"></span>
+      </div>
+    </header>
+    
+    <ol class="discussion">
+      <li class="self">
+        <div class="avatar">
+          <img src="/public/no_profile_image.png">
+        </div>
+        <div class="messages">
+          <p>Say hello dong.</p>
+          <time>Just Now</time>
+        </div>
+      </li>
+      <li class="other" ng-repeat="item in pesanDiterima">
+        <div class="avatar">
+          <img src="/public/no_profile_image.png">
+        </div>
+        <div class="messages">
+          <p>{{item.content}}</p>
+          <time>{{item.source}} • {{item.timestamp}}</time>
+        </div>
+      </li>
+    </ol>
+  </section>
 
-  <div class="row">
-    <div class="col-lg-4">
+  <div class="row" style="margin: 0px 0px auto 20px">
+    <div class="col-lg-12">
         <div class="form-group">
-            <label class="control-label">Your Name</label>
-            <div class="controls"><input type="text" class="form-control" ng-model="source" /></div>
+            <div class="controls"><input type="text" placeholder="Content" class="form-control" ng-model="content" /></div>
         </div>
         <div class="form-group">
-            <label class="control-label">Content</label>
-            <div class="controls"><input type="text" class="form-control" ng-model="content" /></div>
-        </div>
-        <div class="form-group">
-            <label class="control-label">Destination IP</label>
-            <div class="controls"><input type="text" class="form-control" ng-model="destination" /></div>
+            <div class="controls"><input type="text" placeholder="Destination IP" class="form-control" ng-model="destination" /></div>
         </div>
         <div class="form-group">
             <button ng-click="sendMessage()" class="btn btn-primary">Send</button>
-        </div>
-    </div>
-    <div class="col-lg-8">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Received Messages</h3>
-            </div>
-            <div class="panel-body">
-                <h4 ng-repeat="item in pesanDiterima"><strong>{{item.source}}: </strong>{{item.content}}</h4>
-            </div>
         </div>
     </div>
   </div>
