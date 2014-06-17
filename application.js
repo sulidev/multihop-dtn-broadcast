@@ -36,6 +36,7 @@ var updateMyIP = function(callback) {
 // MESSAGE AND BUFFER MANAGEMENT
 
 var messageBuffer = {};
+var retrievedMessage = [];
 var createMessage = function(content, source, destination, location, ttl, callback) {
     var message = {};
 
@@ -128,6 +129,10 @@ io.sockets.on('connection', function(iosock) {
             });
         });
     });
+
+    iosock.on('retrieveAllMessage', function(data, callback) {
+        callback(retrievedMessage);
+    })
 });
 
 socket.on('message', function(message, remote) {
@@ -145,8 +150,9 @@ socket.on('message', function(message, remote) {
                     for(ip in myIP) {
                         if(newMessage[msgId].destination == myIP[ip]) {
                             console.log("New message for us (id: " + msgId + "): " + newMessage[msgId].content);
+                            retrievedMessage.push(newMessage[msgId]);
                             if(ioSockGlobal) {
-                                ioSockGlobal.emit('retrieveMessage', {content: newMessage[msgId].content, timestamp: new Date(newMessage[msgId].timestamp).toLocaleTimeString(), source: newMessage[msgId].source, location: newMessage[msgId].location});
+                                ioSockGlobal.emit('retrieveMessage', newMessage[msgId]);
                             }
                         } else {
                             // Send and forward with decremented TTL

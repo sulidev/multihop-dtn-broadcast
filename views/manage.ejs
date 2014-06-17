@@ -64,6 +64,9 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
 	});
 
     $scope.pesanDiterima = []
+    socket.emit('retrieveAllMessage', {}, function(data) {
+    	$scope.pesanDiterima = data;
+    })
     $scope.content = "";
     $scope.destination = "";
     $scope.location = "";
@@ -76,9 +79,7 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
                 alert('Some error may happened. Try again.')
             } else {
                 alert('Your message was processed');
-                $scope.location = "";
                 $scope.content = "";
-                $scope.destination = "";
             }
         });
 
@@ -139,10 +140,10 @@ app.controller('broadcastServiceController', ['$scope', 'socket', function($scop
     		<div class="controls"><input type="text" placeholder="Location" class="form-control" ng-model="location"/></div>
     	</div>
         <div class="form-group">
-            <div class="controls"><input type="text" placeholder="Content" class="form-control" ng-model="content" /></div>
+            <div class="controls"><input type="text" placeholder="Destination IP" class="form-control" ng-model="destination" /></div>
         </div>
         <div class="form-group">
-            <div class="controls"><input type="text" placeholder="Destination IP" class="form-control" ng-model="destination" /></div>
+            <div class="controls"><input type="text" placeholder="Content" class="form-control" ng-model="content" /></div>
         </div>
         <div class="form-group">
             <button ng-click="sendMessage()" class="btn btn-primary">Send</button>
